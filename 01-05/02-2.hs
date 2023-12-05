@@ -79,10 +79,14 @@ getMax = foldl maxC emptyCubes
 okC :: Cubes -> Bool
 okC c = (red c <= 12) && (green c <= 13) && (blue c <= 14)
 
+power :: Cubes -> Int
+power c = red c * blue c * green c
+
 ---
 
 main :: IO ()
 main = do
     input <- getContents
     let games = parseGame <$> parseLines input
-    print (sum $ (\g -> if okC (getMax $ rounds g) then gid g else 0) <$> games)
+    -- print (sum $ (\g -> if okC (getMax $ rounds g) then gid g else 0) <$> games)
+    print (sum $ power . getMax . rounds <$> games)

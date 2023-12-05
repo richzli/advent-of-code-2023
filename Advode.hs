@@ -1,3 +1,4 @@
+import Control.Applicative
 import Control.Monad
 import Data.Char
 import Data.List
@@ -9,8 +10,11 @@ split p s = case break p s of
     (a, []) -> [a]
     (a, b) -> a : split p (drop 1 b)
 
+strip :: String -> String
+strip = dropWhile isSpace . dropWhileEnd isSpace
+
 parseLines :: String -> [String]
-parseLines = split (=='\n')
+parseLines = dropWhileEnd null . split (=='\n')
 
 parseGroups :: String -> [[String]]
 parseGroups = split null . parseLines
