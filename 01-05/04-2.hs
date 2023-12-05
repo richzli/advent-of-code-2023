@@ -58,7 +58,42 @@ neighbors d p = addPoint p <$> d
 
 ---
 
+checkCard :: [Int] -> [Int] -> Int
+checkCard w n = length $ filter (`elem` w) n
+
+parseNumbers :: String -> [Int]
+parseNumbers s = read <$> filter (/="") (split isSpace s)
+
+parseCard :: String -> Int
+parseCard s =
+    checkCard (parseNumbers w) (parseNumbers n)
+    where
+        cinfo:ns:_ = strip <$> split (==':') s
+        w:n:_ = strip <$> split (=='|') ns
+
+score :: Int -> Int
+score x
+    | 0 <- x = 0
+    | otherwise = 1 `shiftL` (x - 1)
+
+---
+
+sumUp :: Int -> Int -> [Int] -> [Int]
+sumUp n x l
+    | 0 <- n = l
+    | [] <- l = replicate n x
+    | y:ys <- l = (x + y) : sumUp (n - 1) x ys
+
+solve :: [Int] -> [Int] -> Int
+solve dp l = case l of
+    [] -> sum dp
+    y:ys -> 1 + h + solve (sumUp y (1 + h) t) ys
+    where
+        h = if null dp then 0 else head dp
+        t = if null dp then [] else tail dp
+
 main :: IO ()
 main = do
     input <- getContents
-    print ""
+    -- print $ sum $ score . parseCard <$> parseLines input
+    print $ solve [] $ parseCard <$> parseLines input
