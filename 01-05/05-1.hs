@@ -61,7 +61,30 @@ neighbors d p = addPoint p <$> d
 
 ---
 
+data Range = Range {
+    dst :: Int,
+    src :: Int,
+    len :: Int
+} deriving (Show)
+
+parseRange :: String -> Range
+parseRange s = Range (ns!!0) (ns!!1) (ns!!2) where ns = parseNumbers s
+
+inRange :: Range -> Int -> Bool
+inRange r i = i >= src r && i < src r + len r
+
+applyRange :: Range -> Int -> Int
+applyRange r i = if inRange r i then dst r - src r + i else i
+
+applyMap :: [Range] -> Int -> Int
+applyMap rs i = case rs of
+    [] -> i
+    t:ts -> if inRange t i then applyRange t i else applyMap ts i
+
 main :: IO ()
 main = do
     input <- getContents
-    print ""
+    let groups = parseGroups input
+    let seeds = parseNumbers (split (==':') (head $ head groups) !! 1)
+    let maps = fmap parseRange . tail <$> tail groups
+    print $ minimum $ (\s -> foldl (flip applyMap) s maps) <$> seeds
