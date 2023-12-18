@@ -57,34 +57,46 @@ addPoint (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
 subPoint :: Point -> Point -> Point
 subPoint (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
 
+mulPoint :: Int -> Point -> Point
+mulPoint c (x, y) = (c*x, c*y)
+
 neighbors :: [Point] -> Point -> [Point]
 neighbors d p = addPoint p <$> d
 
 ---
 
---- (coords, direction, straightline)
-type Tile = (Point, Int, Int)
+type Instr = (Point, Int, String)
+dirI :: Instr -> Point
+dirI (d, _, _) = d
+distI :: Instr -> Int
+distI (_, d, _) = d
+colorI :: Instr -> String
+colorI (_, _, c) = c
 
-next :: Tile -> [Tile]
-next (p, d, s) = ((\x -> (addPoint p $ d4 !! ((d + x) `mod` 4), (d + x) `mod` 4, 2)) <$> [1, 3]) ++ case s of
-    0 -> []
-    _ -> [(addPoint p $ d4 !! d, d, s-1)]
+hex :: String -> Int
+hex = foldl (\acc c -> acc * 16 + fromJust (elemIndex c "0123456789abcdef")) 0
 
-dijk :: [[Char]] -> Int
-dijk grid =
-    go Map.empty (Set.fromList [(-zz, ((0, 0), 0, 2)), (-zz, ((0, 0), 1, 2))])
+parseInstr :: String -> Instr
+parseInstr s = (dir, len, color)
     where
-        n = length grid - 1
-        m = length (head grid) - 1
-        gridMap = Map.fromList $ (\(x, y) -> (x, (read::String->Int) [y])) <$> enumerate2d grid
-        zz = fromJust $ Map.lookup (0, 0) gridMap
-        go dist pq = case Set.minView pq of
-            Nothing -> minimum $ mapMaybe (\(d, s) -> Map.lookup ((m, n), d, s) dist) ((,) <$> [0..3] <*> [0..2])
-            Just ((d, t@(pt, dir, sl)), pq2) -> case (Map.lookup pt gridMap, Map.lookup t dist) of
-                (Just d2, Nothing) -> go (Map.insert t (d+d2) dist) (Set.union pq2 $ Set.fromList $ (d+d2,) <$> next t)
-                _ -> go dist pq2
+        ss = split isSpace s
+        dir = case head ss of
+            "D" -> d4 !! 0
+            "R" -> d4 !! 1
+            "U" -> d4 !! 2
+            "L" -> d4 !! 3
+        len = read $ ss !! 1
+        color = take 6 $ drop 2 $ ss !! 2
+
+shoelace2 :: [Point] -> Int
+shoelace2 [p] = 0
+shoelace2 ((x1, y1):p@(x2, y2):ps) = x1 * y2 - x2 * y1 + shoelace2 (p:ps)
 
 main :: IO ()
 main = do
     input <- getContents
-    print $ dijk $ parseLines input
+    let instrs = parseInstr <$> parseLines input
+    let perim = foldl (\acc i -> acc + (hex $ take 5 $ colorI i)) 0 instrs
+    let pts = scanl (\acc i -> addPoint acc $ mulPoint (hex $ take 5 $ colorI i) (d4 !! ((5 - read [last $ colorI i]) `mod` 4))) (0, 0) instrs
+    let area = abs $ shoelace2 pts `div` 2
+    print $ area + (perim `div` 2) + 1

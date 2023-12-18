@@ -64,9 +64,6 @@ neighbors d p = addPoint p <$> d
 
 --- (coords, direction, straightline)
 type Tile = (Point, Int, Int)
-type Node = (Int, Tile)
-
-type DijkState = (Map.Map Point Char, Map.Map Tile Int, Set.Set Node)
 
 next :: Tile -> [Tile]
 next (p, d, s)
@@ -85,11 +82,8 @@ dijk grid =
         go dist pq = case Set.minView pq of
             Nothing -> minimum $ mapMaybe (\(d, s) -> Map.lookup ((m, n), d, s) dist) ((,) <$> [0..3] <*> [0..6])
             Just ((d, t@(pt, dir, sl)), pq2) -> case (Map.lookup pt gridMap, Map.lookup t dist) of
-                (Nothing, _) -> go dist pq2
-                (_, Just _) -> go dist pq2
-                (Just d2, Nothing) -> go (Map.insert t (d+d2) dist) (Set.union pq2 $ Set.fromList nxts)
-                    where
-                        nxts = (\t2@(pt, dir, sl) -> (d+d2, t2)) <$> next t
+                (Just d2, Nothing) -> go (Map.insert t (d+d2) dist) (Set.union pq2 $ Set.fromList $ (d+d2,) <$> next t)
+                _ -> go dist pq2
 
 main :: IO ()
 main = do
