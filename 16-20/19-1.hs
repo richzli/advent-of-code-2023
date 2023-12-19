@@ -64,7 +64,54 @@ neighbors d p = addPoint p <$> d
 
 ---
 
+data State = Accept | Reject | At String deriving Eq
+type Part = Map.Map String Int
+data Rule = Rule {
+    cond :: Part -> Bool,
+    next :: State
+}
+
+parseState :: String -> State
+parseState s = case s of
+    "A" -> Accept
+    "R" -> Reject
+    _ -> At s
+
+parseCond :: String -> (Part -> Bool)
+parseCond str = rel (read num) . fromJust . Map.lookup var
+    where
+        rel = if '>' `elem` str then (<) else (>)
+        [var, num] = split (`elem` "<>") str
+
+parseRule :: String -> Rule
+parseRule str = case split (==':') str of
+    [end] -> Rule (const True) (parseState end)
+    [cond, end] -> Rule (parseCond cond) (parseState end)
+
+parseWorkflow :: String -> (String, [Rule])
+parseWorkflow str = (name, parseRule <$> split (==',') rules)
+    where
+        name:rules:_ = split (`elem` "{}") str
+
+to2Tuple :: [String] -> (String, Int)
+to2Tuple [var, num] = (var, read num)
+
+parsePart :: String -> Part
+parsePart str = Map.fromList $ to2Tuple . split (=='=') <$> split (==',') (init $ drop 1 str)
+
+evaluate :: [Rule] -> Part -> State
+evaluate (r:rs) p = if (cond r) p then (next r) else (evaluate rs p)
+
+go :: Map.Map String [Rule] -> State -> Part -> State
+go wfs s p = case s of
+    At w -> go wfs (evaluate (fromJust $ Map.lookup w wfs) p) p
+    _ -> s
+
 main :: IO ()
 main = do
     input <- getContents
-    print ""
+    let [wfsRaw, partsRaw] = parseGroups input
+    let wfs = Map.fromList $ parseWorkflow <$> wfsRaw
+    let parts = parsePart <$> partsRaw
+    print $ sum $ Map.foldr (+) 0 <$> filter ((==) Accept . go wfs (At "in")) parts
+    
