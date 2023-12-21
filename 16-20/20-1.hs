@@ -102,7 +102,7 @@ mul2 (x, y) = x*y
 go :: Map.Map String Module -> Map.Map String [String] -> Int
 go types outputs = mul2 $ fst $ iterate button ((0, 0), State initFlip initConj) !! 1000
     where
-        initFlip = Map.map (const False) $ types
+        initFlip = Map.map (const False) types
         initConj = Map.map Map.fromList $ Map.foldrWithKey (\k a m -> foldr (Map.adjust ((k,False):)) m a) (Map.map (const []) types) outputs
 
         send m a = (\ms -> (if m then (length ms, 0) else (0, length ms), ms)) $ (\r -> Message a r m) <$> fromJust (Map.lookup a outputs)

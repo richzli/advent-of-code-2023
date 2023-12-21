@@ -97,10 +97,13 @@ conjCheck :: String -> State -> Bool
 conjCheck a state = not $ Map.foldr (&&) True $ fromJust $ Map.lookup a $ conjMem state
 
 go :: Map.Map String Module -> Map.Map String [String] -> Int
-go types outputs = foldl lcm 1 $ getCycle <$> ["ln", "dr", "zx", "vn"]
+go types outputs = foldl lcm 1 $ getCycle <$> cycleList
     where
-        initFlip = Map.map (const False) $ types
-        initConj = Map.map Map.fromList $ Map.foldrWithKey (\k a m -> foldr (Map.adjust ((k,False):)) m a) (Map.map (const []) types) outputs
+        inputs = Map.foldrWithKey (\k a m -> foldr (Map.adjust (k:)) m a) (Map.insert "rx" [] $ Map.map (const []) outputs) outputs
+        cycleList = fromJust $ Map.lookup (head $ fromJust $ Map.lookup "rx" inputs) inputs
+
+        initFlip = Map.map (const False) types
+        initConj = Map.map (Map.fromList . fmap (,False)) inputs
         initState = State initFlip initConj
 
         send m a = (\ms -> (if m then (length ms, 0) else (0, length ms), ms)) $ (\r -> Message a r m) <$> fromJust (Map.lookup a outputs)
@@ -108,7 +111,9 @@ go types outputs = foldl lcm 1 $ getCycle <$> ["ln", "dr", "zx", "vn"]
         process [] state = ([], state)
         process (mm@(Message s r m):ms) state = case Map.lookup r types of
             Just FlipFlop -> case m of
-                True -> process ms state
+                True -> (mm:finalCount, finalState)
+                    where
+                        (finalCount, finalState) = process ms state
                 False -> (mm:finalCount, finalState)
                     where
                         newState = flipState r state
